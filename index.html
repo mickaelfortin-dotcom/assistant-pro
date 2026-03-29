@@ -232,7 +232,10 @@ input[type=number]{-moz-appearance:textfield;}
     <div class="mc"><span class="mv" id="m-done">0</span><span class="ml">Faites</span></div>
   </div>
 
-  <div class="s">Projets</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div class="s" style="margin:0">Projets</div>
+    <button class="gbtn" style="font-size:11px;padding:5px 10px" onclick="openModal('modal-project')">+ Projet</button>
+  </div>
   <div class="row-list" id="dash-projects"><div style="color:var(--tx2);font-size:12px;padding:10px 0">Aucun projet — ajoute des tâches pour commencer</div></div>
 
   <div class="s">À traiter</div>
@@ -347,7 +350,10 @@ input[type=number]{-moz-appearance:textfield;}
       <div class="pill" onclick="setTaskFilter('late',this)">Retard</div>
       <div class="pill" onclick="setTaskFilter('terminé',this)">Terminées</div>
     </div>
-    <button class="gbtn" onclick="openModal('modal-task')" style="white-space:nowrap">+ Tâche</button>
+    <div style="display:flex;gap:6px">
+      <button class="gbtn" onclick="openModal('modal-project')" style="white-space:nowrap">+ Projet</button>
+      <button class="gbtn" onclick="openModal('modal-task')" style="white-space:nowrap">+ Tâche</button>
+    </div>
   </div>
   <div id="task-list"></div>
   <div style="height:12px"></div>
@@ -488,6 +494,33 @@ input[type=number]{-moz-appearance:textfield;}
   </div>
 </div>
 
+<!-- MODAL PROJET -->
+<div class="modal-bg" id="modal-project">
+  <div class="modal">
+    <div class="modal-title"><span id="modal-project-title">Nouveau projet</span><button class="modal-close" onclick="closeModal('modal-project')">✕</button></div>
+    <div class="field"><span class="fl">Nom du projet</span><input type="text" class="fi" id="p-nom" placeholder="Ex: Refonte site web client X"></div>
+    <div class="frow2">
+      <div class="field"><span class="fl">Client</span><input type="text" class="fi" id="p-client" placeholder="Nom du client"></div>
+      <div class="field"><span class="fl">Responsable</span><input type="text" class="fi" id="p-resp" placeholder="Prénom Nom"></div>
+    </div>
+    <div class="frow2">
+      <div class="field"><span class="fl">Date de début</span><input type="date" class="fi" id="p-debut"></div>
+      <div class="field"><span class="fl">Date de fin</span><input type="date" class="fi" id="p-fin"></div>
+    </div>
+    <div class="field"><span class="fl">Description</span><textarea class="fi fi-ta" style="min-height:50px" id="p-desc" placeholder="Objectifs, périmètre..."></textarea></div>
+    <div class="field"><span class="fl">Statut</span>
+      <select class="fi" id="p-statut">
+        <option>En cours</option><option>Planifié</option><option>Terminé</option><option>En pause</option>
+      </select>
+    </div>
+    <input type="hidden" id="p-id">
+    <div class="modal-footer">
+      <button class="gbtn" onclick="closeModal('modal-project')">Annuler</button>
+      <button class="pbtn" style="width:auto;padding:10px 20px" onclick="saveProject()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL EMAIL -->
 <div class="modal-bg" id="modal-email">
   <div class="modal">
@@ -541,6 +574,7 @@ function showTab(id, btn){
 
 // ── MODALS ──────────────────────────────────────────────────────────
 function openModal(id){
+  if(id==='modal-project'){openProjectModal(null);return;}
   if(id==='modal-task'){
     document.getElementById('modal-task-title').textContent='Nouvelle tâche';
     ['t-titre','t-assign','t-notes'].forEach(x=>document.getElementById(x).value='');
@@ -680,8 +714,11 @@ function renderDashboard(){
     return `<div class="proj-row">
       <div class="proj-dot" style="background:var(--tx2)"></div>
       <span class="proj-name">${esc(p.nom)}</span>
+      ${p.client?`<span style="font-size:10px;color:var(--tx2)">${esc(p.client)}</span>`:''}
       <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%"></div></div>
       <span class="proj-pct">${pct}%</span>
+      <button style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:12px;padding:2px" onclick="openProjectModal('${p.id}')">✏</button>
+      <button style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:12px;padding:2px" onclick="deleteProject('${p.id}')">✕</button>
     </div>`;
   }).join('');
 
@@ -1064,6 +1101,57 @@ function sendEmail(){
     if(d.sent||d.message){document.getElementById('email-status').textContent='✓ Envoyé';setTimeout(()=>closeModal('modal-email'),1200);}
     else document.getElementById('email-status').textContent='Erreur: '+(d.error||'Inconnue');
   }).catch(()=>{document.getElementById('email-status').textContent='Serveur inaccessible';});
+}
+
+// ── PROJECTS ──────────────────────────────────────────────────────
+function saveProject(){
+  var nom=document.getElementById('p-nom').value.trim();
+  if(!nom){alert('Nom du projet requis');return;}
+  var id=document.getElementById('p-id').value;
+  var p={
+    id:id||DB.id(), nom,
+    client:document.getElementById('p-client').value,
+    responsable:document.getElementById('p-resp').value,
+    debut:document.getElementById('p-debut').value,
+    fin:document.getElementById('p-fin').value,
+    description:document.getElementById('p-desc').value,
+    statut:document.getElementById('p-statut').value,
+  };
+  if(id){var i=DB.projets.findIndex(x=>x.id===id);if(i>=0)DB.projets[i]=p;}
+  else DB.projets.push(p);
+  DB.save();closeModal('modal-project');
+  updateStats();renderDashboard();populateSelects();renderTasks();
+  alert('Projet "'+nom+'" '+(id?'modifié':'créé')+' !');
+}
+
+function openProjectModal(id){
+  if(id){
+    var p=DB.projets.find(x=>x.id===id);if(!p)return;
+    document.getElementById('modal-project-title').textContent='Modifier le projet';
+    document.getElementById('p-nom').value=p.nom;
+    document.getElementById('p-client').value=p.client||'';
+    document.getElementById('p-resp').value=p.responsable||'';
+    document.getElementById('p-debut').value=p.debut||'';
+    document.getElementById('p-fin').value=p.fin||'';
+    document.getElementById('p-desc').value=p.description||'';
+    document.getElementById('p-statut').value=p.statut||'En cours';
+    document.getElementById('p-id').value=id;
+  } else {
+    document.getElementById('modal-project-title').textContent='Nouveau projet';
+    ['p-nom','p-client','p-resp','p-desc'].forEach(x=>document.getElementById(x).value='');
+    document.getElementById('p-debut').value=today();
+    document.getElementById('p-fin').value='';
+    document.getElementById('p-statut').value='En cours';
+    document.getElementById('p-id').value='';
+  }
+  document.getElementById('modal-project').classList.add('open');
+}
+
+function deleteProject(id){
+  if(!confirm('Supprimer ce projet ? Les tâches associées resteront mais sans projet.'))return;
+  DB.projets=DB.projets.filter(p=>p.id!==id);
+  DB.taches.forEach(t=>{if(t.projetId===id)t.projetId='';});
+  DB.save();updateStats();renderDashboard();populateSelects();renderTasks();
 }
 
 // ── HEALTH ────────────────────────────────────────────────────────
