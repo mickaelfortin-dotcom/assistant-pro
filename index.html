@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<title>Assistant Pro</title>
+<style>
+:root{
+  --bg:#ffffff;--s:#f9f9f9;--bd:#e5e5e5;--bd2:#d4d4d4;
+  --tx:#111111;--tx2:#6b7280;--tx3:#9ca3af;
+  --acc:#111111;--acc2:#374151;
+  --gn:#10b981;--rd:#ef4444;--or:#f59e0b;--pu:#6366f1;
+  --radius:10px;
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#0f0f0f;--s:#1a1a1a;--bd:#2a2a2a;--bd2:#3a3a3a;--tx:#f5f5f5;--tx2:#9ca3af;--tx3:#6b7280;--acc:#f5f5f5;--acc2:#d1d5db;}
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;
+  display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);}
+
+/* TOP */
+.top{padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.top-title{font-size:15px;font-weight:500;color:var(--tx);}
+.top-right{display:flex;align-items:center;gap:10px;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--tx3);}
+.status-dot.ok{background:var(--gn);}
+.status-dot.err{background:var(--rd);}
+.status-dot.spin{background:var(--or);animation:pl 1s infinite;}
+@keyframes pl{0%,100%{opacity:.3}50%{opacity:1}}
+.logout-lnk{font-size:12px;color:var(--tx3);cursor:pointer;text-decoration:none;}
+
+/* NAV */
+.nav{display:flex;padding:14px 18px 0;border-bottom:0.5px solid var(--bd);overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.nav::-webkit-scrollbar{display:none;}
+.nt{padding:0 0 10px;margin-right:22px;font-size:12px;color:var(--tx2);cursor:pointer;white-space:nowrap;border-bottom:1.5px solid transparent;transition:all .12s;-webkit-user-select:none;user-select:none;}
+.nt.on{color:var(--tx);font-weight:500;border-bottom-color:var(--tx);}
+
+/* VIEWS */
+.views{flex:1;overflow:hidden;position:relative;}
+.view{position:absolute;inset:0;overflow-y:auto;display:none;-webkit-overflow-scrolling:touch;padding:18px;}
+.view.on{display:block;}
+
+/* Common */
+.s{font-size:11px;color:var(--tx2);margin-bottom:8px;letter-spacing:.2px;}
+.spacer{height:16px;}
+
+/* Metrics */
+.mx{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bd);border:0.5px solid var(--bd);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;}
+.mc{background:var(--bg);padding:12px 8px;text-align:center;}
+.mv{font-size:19px;font-weight:400;color:var(--tx);display:block;line-height:1;}
+.ml{font-size:9px;color:var(--tx2);margin-top:4px;display:block;}
+
+/* Row list */
+.row-list{margin-bottom:16px;}
+.row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--bd);}
+.row:last-child{border:none;}
+.ric{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--bd2);flex-shrink:0;}
+.ric.done{background:var(--tx);border-color:var(--tx);}
+.ric.prog{border-color:var(--pu);}
+.ric.prog::after{content:'';display:block;width:5px;height:5px;border-radius:50%;margin:2.5px;background:var(--pu);}
+.ric.block{border-color:var(--rd);}
+.ric.block::after{content:'';display:block;width:5px;height:5px;border-radius:50%;margin:2.5px;background:var(--rd);}
+.rn{flex:1;font-size:13px;color:var(--tx);}
+.rn.dim{color:var(--tx2);text-decoration:line-through;}
+.rt{font-size:10px;padding:2px 7px;border-radius:4px;background:var(--s);color:var(--tx2);white-space:nowrap;}
+.rt.rd{background:#fee2e2;color:#991b1b;}
+.rt.or{background:#fef3c7;color:#92400e;}
+.prio-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* Forms */
+.field{margin-bottom:14px;}
+.fl{font-size:11px;color:var(--tx2);margin-bottom:5px;display:block;}
+.fi{background:transparent;border:none;border-bottom:0.5px solid var(--bd2);border-radius:0;padding:7px 0;font-size:14px;color:var(--tx);width:100%;outline:none;font-family:inherit;}
+.fi::placeholder{color:var(--tx3);}
+.fi:focus{border-bottom-color:var(--tx);}
+.fi-ta{resize:none;min-height:80px;line-height:1.6;font-size:13px;}
+.frow2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+/* Primary button */
+.pbtn{background:var(--tx);color:var(--bg);border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:500;width:100%;cursor:pointer;font-family:inherit;letter-spacing:.1px;-webkit-user-select:none;user-select:none;}
+.pbtn:active{opacity:.85;}
+
+/* Ghost button */
+.gbtn{background:transparent;border:0.5px solid var(--bd2);border-radius:8px;padding:8px 14px;font-size:12px;color:var(--tx2);cursor:pointer;font-family:inherit;}
+.gbtn:active{background:var(--s);}
+
+/* Pills */
+.pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;}
+.pill{font-size:11px;padding:5px 11px;border-radius:6px;cursor:pointer;border:0.5px solid var(--bd);color:var(--tx2);background:transparent;-webkit-user-select:none;user-select:none;transition:all .1s;}
+.pill.on{background:var(--tx);color:var(--bg);border-color:var(--tx);}
+
+/* Output box */
+.out{padding:14px;background:var(--s);border-radius:var(--radius);margin-top:14px;}
+.out-title{font-size:13px;font-weight:500;margin-bottom:4px;color:var(--tx);}
+.out-meta{font-size:10px;color:var(--tx2);margin-bottom:10px;}
+.out-text{font-size:13px;color:var(--tx);line-height:1.8;white-space:pre-wrap;word-break:break-word;}
+.out-actions{display:flex;gap:16px;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--bd);}
+.obtn{font-size:12px;color:var(--tx2);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;}
+.obtn.p{color:var(--tx);font-weight:500;}
+
+/* Thinking */
+.think{display:flex;align-items:center;gap:8px;padding:12px;background:var(--s);border-radius:var(--radius);font-size:12px;color:var(--tx2);margin-top:10px;}
+.dots span{display:inline-block;animation:bl 1.2s infinite;}
+.dots span:nth-child(2){animation-delay:.2s;}.dots span:nth-child(3){animation-delay:.4s;}
+@keyframes bl{0%,100%{opacity:.2}50%{opacity:1}}
+
+/* Drop zone */
+.drop{border:0.5px dashed var(--bd2);border-radius:var(--radius);padding:28px 16px;text-align:center;cursor:pointer;-webkit-user-select:none;user-select:none;}
+.drop:active{background:var(--s);}
+.drop-title{font-size:14px;font-weight:500;color:var(--tx);margin-bottom:4px;}
+.drop-sub{font-size:12px;color:var(--tx2);}
+.file-row{display:flex;align-items:center;gap:10px;padding:12px;background:var(--s);border-radius:var(--radius);margin-bottom:14px;}
+.file-ic{font-size:20px;}
+.file-name{font-size:13px;font-weight:500;color:var(--tx);}
+.file-ok{font-size:11px;color:var(--gn);margin-top:2px;}
+
+/* Input modes toggle */
+.mode-toggle{display:flex;background:var(--s);border-radius:8px;padding:3px;margin-bottom:16px;}
+.mode-btn{flex:1;padding:7px;text-align:center;font-size:12px;color:var(--tx2);cursor:pointer;border-radius:6px;transition:all .12s;-webkit-user-select:none;user-select:none;}
+.mode-btn.on{background:var(--bg);color:var(--tx);font-weight:500;box-shadow:0 0.5px 2px rgba(0,0,0,.1);}
+
+/* Paste zone */
+.paste-zone{background:var(--s);border-radius:var(--radius);padding:14px;min-height:130px;cursor:text;}
+.paste-zone-label{font-size:11px;color:var(--tx2);margin-bottom:8px;}
+.paste-content{font-size:13px;color:var(--tx);line-height:1.7;}
+.paste-placeholder{font-size:13px;color:var(--tx3);font-style:italic;}
+
+/* Photo zone */
+.photo-zone{border:0.5px dashed var(--bd2);border-radius:var(--radius);padding:30px 16px;text-align:center;cursor:pointer;}
+.photo-zone-title{font-size:14px;font-weight:500;color:var(--tx);margin-bottom:4px;}
+.photo-zone-sub{font-size:12px;color:var(--tx2);line-height:1.5;}
+.photo-preview{display:flex;align-items:center;gap:10px;padding:12px;background:var(--s);border-radius:var(--radius);}
+.photo-thumb{width:48px;height:48px;border-radius:8px;background:var(--bd);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+
+/* Tone selector */
+.tones{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;}
+.tone{font-size:11px;padding:5px 11px;border-radius:6px;cursor:pointer;border:0.5px solid var(--bd);color:var(--tx2);background:transparent;-webkit-user-select:none;user-select:none;transition:all .1s;}
+.tone.on{background:var(--tx);color:var(--bg);border-color:var(--tx);}
+
+/* Context row */
+.ctx-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.ctx-field{}
+.ctx-lbl{font-size:11px;color:var(--tx2);margin-bottom:4px;}
+.ctx-val{background:var(--s);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--tx2);}
+
+/* Reply output */
+.reply-out{border:0.5px solid var(--bd);border-radius:var(--radius);overflow:hidden;margin-top:14px;}
+.reply-out-hd{padding:10px 14px;border-bottom:0.5px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--s);}
+.reply-out-lbl{font-size:11px;color:var(--tx2);}
+.regen-btn{font-size:11px;color:var(--tx2);background:none;border:none;cursor:pointer;font-family:inherit;}
+.reply-out-body{padding:14px;font-size:13px;color:var(--tx);line-height:1.8;}
+.reply-out-ft{padding:10px 14px;border-top:0.5px solid var(--bd);display:flex;justify-content:space-between;align-items:center;background:var(--s);}
+.reply-ft-left{display:flex;gap:12px;}
+.reply-ft-btn{font-size:12px;color:var(--tx2);background:none;border:none;cursor:pointer;font-family:inherit;}
+.send-reply{background:var(--tx);color:var(--bg);border:none;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;}
+
+/* Gantt */
+.gantt{padding:14px;background:var(--s);border-radius:var(--radius);}
+.g-hd{display:flex;padding-left:88px;justify-content:space-between;font-size:9px;color:var(--tx2);margin-bottom:8px;}
+.gr{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.gl{width:88px;font-size:10px;color:var(--tx2);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;}
+.gt{flex:1;height:18px;background:var(--bg);border-radius:3px;overflow:hidden;position:relative;}
+.gb{height:100%;border-radius:3px;position:absolute;display:flex;align-items:center;padding:0 6px;}
+.gb span{font-size:9px;color:#fff;font-weight:500;}
+.g-legend{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;}
+.g-leg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--tx2);}
+.g-leg-dot{width:8px;height:8px;border-radius:2px;}
+.gantt-controls{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+
+/* Project row */
+.proj-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--bd);}
+.proj-row:last-child{border:none;}
+.proj-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.proj-name{flex:1;font-size:13px;color:var(--tx);}
+.prog-wrap{width:44px;height:2px;background:var(--bd);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:2px;background:var(--tx2);}
+.proj-pct{font-size:10px;color:var(--tx2);width:28px;text-align:right;}
+
+/* Modal bottom sheet */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:flex-end;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--bg);border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;}
+.modal-title{font-size:14px;font-weight:500;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;}
+.modal-close{background:transparent;border:none;color:var(--tx2);cursor:pointer;font-size:20px;line-height:1;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+
+/* File input hidden */
+input[type=file]{display:none;}
+input[type=number]{-moz-appearance:textfield;}
+
+::-webkit-scrollbar{width:0;height:0;}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="top-title">Assistant Pro</div>
+  <div class="top-right">
+    <div class="status-dot spin" id="sdot"></div>
+    <a class="logout-lnk" href="/logout">Déconnexion</a>
+  </div>
+</div>
+
+<div class="nav">
+  <div class="nt on" onclick="showTab('dash',this)">Vue d'ensemble</div>
+  <div class="nt" onclick="showTab('email',this)">Répondre</div>
+  <div class="nt" onclick="showTab('tasks',this)">Tâches</div>
+  <div class="nt" onclick="showTab('cr',this)">Compte rendu</div>
+  <div class="nt" onclick="showTab('docs',this)">Documents</div>
+  <div class="nt" onclick="showTab('gantt',this)">Gantt</div>
+</div>
+
+<div class="views">
+
+<!-- DASHBOARD -->
+<div class="view on" id="view-dash">
+  <div class="mx" id="dash-metrics">
+    <div class="mc"><span class="mv" id="m-tasks">0</span><span class="ml">Tâches</span></div>
+    <div class="mc"><span class="mv" id="m-late" style="color:var(--rd)">0</span><span class="ml">Retard</span></div>
+    <div class="mc"><span class="mv" id="m-proj">0</span><span class="ml">Projets</span></div>
+    <div class="mc"><span class="mv" id="m-done">0</span><span class="ml">Faites</span></div>
+  </div>
+
+  <div class="s">Projets</div>
+  <div class="row-list" id="dash-projects"><div style="color:var(--tx2);font-size:12px;padding:10px 0">Aucun projet — ajoute des tâches pour commencer</div></div>
+
+  <div class="s">À traiter</div>
+  <div class="row-list" id="dash-urgent"><div style="color:var(--tx2);font-size:12px;padding:10px 0">Aucune urgence</div></div>
+
+  <div class="spacer"></div>
+  <div class="s">Rapport de statut IA</div>
+  <button class="pbtn" onclick="generateReport()">Générer le rapport</button>
+  <div id="report-think" style="display:none" class="think"><span>✦</span><span>Analyse en cours...</span><span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
+  <div id="report-result" style="display:none">
+    <div class="out">
+      <div class="out-title">Rapport de statut</div>
+      <div class="out-text" id="report-text"></div>
+      <div class="out-actions">
+        <button class="obtn" onclick="copyText('report-text')">Copier</button>
+        <button class="obtn p" onclick="emailContent('report-text','Rapport de statut projet')">Envoyer par email</button>
+      </div>
+    </div>
+  </div>
+  <div style="height:30px"></div>
+</div>
+
+<!-- EMAIL REPLY -->
+<div class="view" id="view-email">
+  <div class="s">Mode de saisie</div>
+  <div class="mode-toggle">
+    <div class="mode-btn on" onclick="setMode('paste',this)">Coller le texte</div>
+    <div class="mode-btn" onclick="setMode('photo',this)">Photo</div>
+  </div>
+
+  <!-- Paste mode -->
+  <div id="mode-paste">
+    <input type="file" id="file-input-hidden" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+    <div class="paste-zone" id="paste-zone">
+      <div class="paste-zone-label">Colle ici le contenu de l'email reçu</div>
+      <div id="paste-placeholder" class="paste-placeholder">Appuie longuement → Coller...</div>
+      <div id="paste-content" class="paste-content" style="display:none"></div>
+    </div>
+    <div style="margin-top:8px;text-align:right">
+      <button class="gbtn" onclick="pasteFromClipboard()">📋 Coller depuis le presse-papier</button>
+    </div>
+  </div>
+
+  <!-- Photo mode -->
+  <div id="mode-photo" style="display:none">
+    <div class="photo-zone" id="photo-empty" onclick="document.getElementById('file-input-hidden').click()">
+      <div class="photo-zone-title">Prendre une photo</div>
+      <div class="photo-zone-sub">Pointe ton téléphone vers l'email — sur papier, imprimé ou affiché sur un écran. L'IA lit et extrait le texte automatiquement.</div>
+    </div>
+    <div class="photo-preview" id="photo-prev" style="display:none">
+      <div class="photo-thumb">📸</div>
+      <div>
+        <div class="file-name" id="photo-name">Photo chargée</div>
+        <div class="file-ok">Prêt pour l'analyse</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <div class="ctx-row">
+    <div class="ctx-field">
+      <div class="ctx-lbl">Contexte (optionnel)</div>
+      <input type="text" class="fi" id="email-context" placeholder="Ex: accepter la réunion">
+    </div>
+    <div class="ctx-field">
+      <div class="ctx-lbl">Longueur</div>
+      <select class="fi" id="email-length">
+        <option value="courte">Courte</option>
+        <option value="standard" selected>Standard</option>
+        <option value="détaillée">Détaillée</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="s">Ton de la réponse</div>
+  <div class="tones" id="tone-group">
+    <div class="tone on" onclick="setTone(this)">Professionnel</div>
+    <div class="tone" onclick="setTone(this)">Cordial</div>
+    <div class="tone" onclick="setTone(this)">Direct</div>
+    <div class="tone" onclick="setTone(this)">Formel</div>
+    <div class="tone" onclick="setTone(this)">Détendu</div>
+  </div>
+
+  <button class="pbtn" onclick="generateReply()">Générer la réponse</button>
+
+  <div id="reply-think" style="display:none" class="think"><span>✦</span><span>Rédaction en cours...</span><span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
+
+  <div class="reply-out" id="reply-out" style="display:none">
+    <div class="reply-out-hd">
+      <span class="reply-out-lbl">Réponse générée</span>
+      <button class="regen-btn" onclick="generateReply()">↺ Régénérer</button>
+    </div>
+    <div class="reply-out-body" id="reply-body"></div>
+    <div class="reply-out-ft">
+      <div class="reply-ft-left">
+        <button class="reply-ft-btn" onclick="copyText('reply-body')">📋 Copier</button>
+        <button class="reply-ft-btn" onclick="emailContent('reply-body','Réponse email')">📧 Email</button>
+      </div>
+      <button class="send-reply" onclick="emailContent('reply-body','Réponse email')">Envoyer ↗</button>
+    </div>
+  </div>
+  <div style="height:30px"></div>
+</div>
+
+<!-- TÂCHES -->
+<div class="view" id="view-tasks">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div class="pills" style="margin:0">
+      <div class="pill on" onclick="setTaskFilter('all',this)">Toutes</div>
+      <div class="pill" onclick="setTaskFilter('en cours',this)">En cours</div>
+      <div class="pill" onclick="setTaskFilter('late',this)">Retard</div>
+      <div class="pill" onclick="setTaskFilter('terminé',this)">Terminées</div>
+    </div>
+    <button class="gbtn" onclick="openModal('modal-task')" style="white-space:nowrap">+ Tâche</button>
+  </div>
+  <div id="task-list"></div>
+  <div style="height:12px"></div>
+  <div style="display:flex;gap:8px">
+    <button class="gbtn" onclick="exportTasksExcel()">Export Excel</button>
+    <button class="gbtn" onclick="exportLateExcel()">Export retards</button>
+  </div>
+  <div style="height:30px"></div>
+</div>
+
+<!-- COMPTE RENDU -->
+<div class="view" id="view-cr">
+  <div class="frow2">
+    <div class="field"><span class="fl">Projet</span><select class="fi" id="cr-projet"><option value="">— Général —</option></select></div>
+    <div class="field"><span class="fl">Date</span><input type="date" class="fi" id="cr-date"></div>
+  </div>
+  <div class="frow2">
+    <div class="field"><span class="fl">Type de réunion</span>
+      <select class="fi" id="cr-type">
+        <option>Réunion de suivi</option>
+        <option>Lancement projet</option>
+        <option>Point d'étape</option>
+        <option>Réunion client</option>
+        <option>Revue de sprint</option>
+      </select>
+    </div>
+    <div class="field"><span class="fl">Participants</span><input type="text" class="fi" id="cr-participants" placeholder="Marie, Jean..."></div>
+  </div>
+  <div class="field"><span class="fl">Points abordés</span><textarea class="fi fi-ta" id="cr-points" placeholder="Résumé libre des échanges, décisions, problèmes rencontrés..."></textarea></div>
+  <div class="field"><span class="fl">Actions à suivre</span><textarea class="fi fi-ta" style="min-height:60px" id="cr-actions" placeholder="Qui fait quoi avant quand..."></textarea></div>
+  <button class="pbtn" onclick="generateCR()">Générer le compte rendu</button>
+  <div id="cr-think" style="display:none" class="think"><span>✦</span><span>Rédaction du compte rendu...</span><span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
+  <div id="cr-result" style="display:none">
+    <div class="out">
+      <div class="out-title" id="cr-out-title">Compte rendu</div>
+      <div class="out-meta" id="cr-out-meta"></div>
+      <div class="out-text" id="cr-out"></div>
+      <div class="out-actions">
+        <button class="obtn" onclick="copyText('cr-out')">Copier</button>
+        <button class="obtn" onclick="exportCRExcel()">Excel</button>
+        <button class="obtn p" onclick="emailContent('cr-out','Compte rendu de réunion')">Envoyer par email</button>
+      </div>
+    </div>
+  </div>
+  <div style="height:30px"></div>
+</div>
+
+<!-- DOCUMENTS -->
+<div class="view" id="view-docs">
+  <input type="file" id="doc-input" accept=".pdf,.docx,.xlsx,.xls,.txt,.csv,.md" onchange="handleDocFile(this)">
+  <div id="doc-drop-zone">
+    <div class="drop" onclick="document.getElementById('doc-input').click()">
+      <div class="drop-title">Dépose un fichier</div>
+      <div class="drop-sub">PDF · Word · Excel · CSV · TXT</div>
+    </div>
+  </div>
+  <div id="doc-file-info" style="display:none" class="file-row">
+    <span class="file-ic">📄</span>
+    <div>
+      <div class="file-name" id="doc-filename"></div>
+      <div class="file-ok" id="doc-filesize"></div>
+    </div>
+    <button class="gbtn" style="margin-left:auto;font-size:11px" onclick="resetDoc()">Changer</button>
+  </div>
+  <div id="doc-actions" style="display:none">
+    <div class="s">Que faire avec ce document ?</div>
+    <div class="pills" id="doc-action-pills">
+      <div class="pill on" data-action="resume">Résumé</div>
+      <div class="pill" data-action="points">Points clés</div>
+      <div class="pill" data-action="action">Actions</div>
+      <div class="pill" data-action="risks">Risques</div>
+      <div class="pill" data-action="custom">Question libre</div>
+    </div>
+    <div id="doc-custom-q" style="display:none">
+      <div class="field"><span class="fl">Ta question</span><textarea class="fi fi-ta" style="min-height:50px" id="doc-question" placeholder="Ex: Quels sont les délais mentionnés ?"></textarea></div>
+    </div>
+    <button class="pbtn" onclick="analyzeDoc()">Analyser le document</button>
+  </div>
+  <div id="doc-think" style="display:none" class="think"><span>✦</span><span>Analyse en cours...</span><span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
+  <div id="doc-result" style="display:none">
+    <div class="out">
+      <div class="out-title" id="doc-out-title">Analyse</div>
+      <div class="out-text" id="doc-out"></div>
+      <div class="out-actions">
+        <button class="obtn" onclick="copyText('doc-out')">Copier</button>
+        <button class="obtn" onclick="exportDocExcel()">Excel</button>
+        <button class="obtn p" onclick="emailContent('doc-out','Analyse de document')">Envoyer par email</button>
+      </div>
+    </div>
+  </div>
+  <div style="height:30px"></div>
+</div>
+
+<!-- GANTT -->
+<div class="view" id="view-gantt">
+  <div class="gantt-controls">
+    <div class="pills" style="margin:0">
+      <div class="pill on" onclick="setGanttLevel('simple',this)">Semaines</div>
+      <div class="pill" onclick="setGanttLevel('detail',this)">Mois</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="gbtn" style="font-size:11px" onclick="exportGanttSVG()">SVG</button>
+      <button class="gbtn" style="font-size:11px" onclick="exportGanttExcel()">Excel</button>
+    </div>
+  </div>
+  <div id="gantt-wrap">
+    <div style="color:var(--tx2);font-size:12px;padding:20px 0;text-align:center">Ajoute des tâches avec des dates début et fin pour voir le Gantt</div>
+  </div>
+  <div style="height:30px"></div>
+</div>
+
+</div><!-- /views -->
+
+<!-- MODAL TÂCHE -->
+<div class="modal-bg" id="modal-task">
+  <div class="modal">
+    <div class="modal-title"><span id="modal-task-title">Nouvelle tâche</span><button class="modal-close" onclick="closeModal('modal-task')">✕</button></div>
+    <div class="field"><span class="fl">Titre</span><input type="text" class="fi" id="t-titre" placeholder="Ex: Livrer le rapport"></div>
+    <div class="field"><span class="fl">Projet</span><select class="fi" id="t-projet"><option value="">— Sans projet —</option></select></div>
+    <div class="frow2">
+      <div class="field"><span class="fl">Assigné à</span><input type="text" class="fi" id="t-assign" placeholder="Prénom"></div>
+      <div class="field"><span class="fl">Priorité</span><select class="fi" id="t-prio"><option>Haute</option><option selected>Moyenne</option><option>Basse</option></select></div>
+    </div>
+    <div class="frow2">
+      <div class="field"><span class="fl">Début</span><input type="date" class="fi" id="t-debut"></div>
+      <div class="field"><span class="fl">Deadline</span><input type="date" class="fi" id="t-fin"></div>
+    </div>
+    <div class="frow2">
+      <div class="field"><span class="fl">Avancement %</span><input type="number" class="fi" id="t-pct" min="0" max="100" value="0"></div>
+      <div class="field"><span class="fl">Statut</span><select class="fi" id="t-statut"><option>En cours</option><option>À faire</option><option>Bloqué</option><option>Terminé</option></select></div>
+    </div>
+    <div class="field"><span class="fl">Notes</span><textarea class="fi fi-ta" style="min-height:50px" id="t-notes" placeholder="Détails, blocages..."></textarea></div>
+    <input type="hidden" id="t-id">
+    <div class="modal-footer">
+      <button class="gbtn" onclick="closeModal('modal-task')">Annuler</button>
+      <button class="pbtn" style="width:auto;padding:10px 20px" onclick="saveTask()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EMAIL -->
+<div class="modal-bg" id="modal-email">
+  <div class="modal">
+    <div class="modal-title">Envoyer par email<button class="modal-close" onclick="closeModal('modal-email')">✕</button></div>
+    <div class="field"><span class="fl">Destinataires</span><input type="email" class="fi" id="email-to" placeholder="jean@exemple.com"></div>
+    <div class="field"><span class="fl">Sujet</span><input type="text" class="fi" id="email-subj"></div>
+    <div style="background:var(--s);border-radius:8px;padding:10px;font-size:12px;color:var(--tx2);max-height:100px;overflow-y:auto;margin-bottom:10px" id="email-preview-box"></div>
+    <div id="email-status" style="font-size:12px;color:var(--tx2);margin-bottom:8px"></div>
+    <div class="modal-footer">
+      <button class="gbtn" onclick="closeModal('modal-email')">Annuler</button>
+      <button class="pbtn" style="width:auto;padding:10px 20px" onclick="sendEmail()">Envoyer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────
+var DB = {
+  projets:[], taches:[],
+  save(){localStorage.setItem('ap2',JSON.stringify({p:this.projets,t:this.taches}));},
+  load(){var d=localStorage.getItem('ap2');if(d){var x=JSON.parse(d);this.projets=x.p||[];this.taches=x.t||[];}}
+  ,id(){return Date.now()+'_'+Math.random().toString(36).substr(2,4);}
+};
+DB.load();
+
+var taskFilter='all', ganttLevel='simple';
+var currentEmailContent='', currentEmailSubject='';
+var currentDocText='', currentDocName='', currentPhotoData=null;
+var emailMode='paste';
+
+// ── UTILS ──────────────────────────────────────────────────────────
+function today(){return new Date().toISOString().split('T')[0];}
+function fmt(d){if(!d)return'—';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function daysDiff(ds){if(!ds)return null;return Math.ceil((new Date(ds)-new Date(today()))/(864e5));}
+function dateStatus(ds,done){if(done||!ds)return'ok';var d=daysDiff(ds);return d<0?'late':d<=3?'soon':'ok';}
+function dateLabel(ds,done){if(!ds)return'';var d=daysDiff(ds);if(done)return fmt(ds);if(d<0)return Math.abs(d)+'j retard';if(d===0)return'Aujourd\'hui';if(d<=3)return d+'j';return fmt(ds);}
+function scrollTo(el){el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+
+// ── TABS ──────────────────────────────────────────────────────────
+function showTab(id, btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.querySelectorAll('.nt').forEach(b=>b.classList.remove('on'));
+  document.getElementById('view-'+id).classList.add('on');
+  btn.classList.add('on');
+  if(id==='dash'){renderDashboard();updateStats();}
+  if(id==='tasks'){renderTasks();populateSelects();}
+  if(id==='gantt'){renderGantt();}
+  if(id==='cr'){populateCRProjet();}
+}
+
+// ── MODALS ──────────────────────────────────────────────────────────
+function openModal(id){
+  if(id==='modal-task'){
+    document.getElementById('modal-task-title').textContent='Nouvelle tâche';
+    ['t-titre','t-assign','t-notes'].forEach(x=>document.getElementById(x).value='');
+    document.getElementById('t-pct').value='0';
+    document.getElementById('t-id').value='';
+    document.getElementById('t-debut').value=today();
+    document.getElementById('t-fin').value='';
+    document.getElementById('t-prio').value='Moyenne';
+    document.getElementById('t-statut').value='En cours';
+    populateSelects();
+  }
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-bg').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
+});
+
+function populateSelects(){
+  ['t-projet','cr-projet'].forEach(selId=>{
+    var sel=document.getElementById(selId);if(!sel)return;
+    var first=selId==='t-projet'?'<option value="">— Sans projet —</option>':'<option value="">— Général —</option>';
+    sel.innerHTML=first+DB.projets.map(p=>`<option value="${p.id}">${esc(p.nom)}</option>`).join('');
+  });
+}
+function populateCRProjet(){
+  populateSelects();
+  if(!document.getElementById('cr-date').value) document.getElementById('cr-date').value=today();
+}
+
+// ── TASKS ──────────────────────────────────────────────────────────
+function saveTask(){
+  var titre=document.getElementById('t-titre').value.trim();
+  if(!titre){alert('Titre requis');return;}
+  var id=document.getElementById('t-id').value;
+  var t={id:id||DB.id(),titre,projetId:document.getElementById('t-projet').value,
+    assignee:document.getElementById('t-assign').value,
+    priorite:document.getElementById('t-prio').value,
+    debut:document.getElementById('t-debut').value,
+    fin:document.getElementById('t-fin').value,
+    pct:parseInt(document.getElementById('t-pct').value)||0,
+    statut:document.getElementById('t-statut').value,
+    notes:document.getElementById('t-notes').value};
+  if(t.statut==='Terminé')t.pct=100;
+  if(id){var i=DB.taches.findIndex(x=>x.id===id);if(i>=0)DB.taches[i]=t;}
+  else DB.taches.push(t);
+  DB.save();closeModal('modal-task');renderTasks();updateStats();renderDashboard();
+}
+
+function editTask(id){
+  var t=DB.taches.find(x=>x.id===id);if(!t)return;
+  populateSelects();
+  document.getElementById('modal-task-title').textContent='Modifier la tâche';
+  document.getElementById('t-titre').value=t.titre;
+  document.getElementById('t-projet').value=t.projetId||'';
+  document.getElementById('t-assign').value=t.assignee||'';
+  document.getElementById('t-prio').value=t.priorite||'Moyenne';
+  document.getElementById('t-debut').value=t.debut||'';
+  document.getElementById('t-fin').value=t.fin||'';
+  document.getElementById('t-pct').value=t.pct||0;
+  document.getElementById('t-statut').value=t.statut||'En cours';
+  document.getElementById('t-notes').value=t.notes||'';
+  document.getElementById('t-id').value=id;
+  document.getElementById('modal-task').classList.add('open');
+}
+
+function deleteTask(id){if(!confirm('Supprimer ?'))return;DB.taches=DB.taches.filter(t=>t.id!==id);DB.save();renderTasks();updateStats();}
+
+function toggleTask(id){
+  var t=DB.taches.find(x=>x.id===id);if(!t)return;
+  t.statut=t.statut==='Terminé'?'En cours':'Terminé';
+  t.pct=t.statut==='Terminé'?100:t.pct;
+  DB.save();renderTasks();updateStats();
+}
+
+function setTaskFilter(f,btn){
+  taskFilter=f;
+  document.querySelectorAll('.pills .pill').forEach(p=>{if(p.closest('#view-tasks')?.querySelector('.pills')===p.parentElement)p.classList.remove('on');});
+  btn.classList.add('on');
+  renderTasks();
+}
+
+function renderTasks(){
+  var el=document.getElementById('task-list');
+  var tasks=DB.taches.filter(t=>{
+    if(taskFilter==='all')return true;
+    if(taskFilter==='late'){var d=daysDiff(t.fin);return d!==null&&d<0&&t.statut!=='Terminé';}
+    return t.statut===taskFilter;
+  });
+  if(!tasks.length){el.innerHTML='<div style="color:var(--tx2);font-size:12px;padding:20px 0;text-align:center">Aucune tâche</div>';return;}
+
+  // Group by status
+  var groups=[{label:'En retard',filter:t=>{var d=daysDiff(t.fin);return d!==null&&d<0&&t.statut!=='Terminé';},col:'var(--rd)'},
+    {label:'En cours',filter:t=>t.statut==='En cours'&&!(daysDiff(t.fin)<0),col:'var(--pu)'},
+    {label:'À faire',filter:t=>t.statut==='À faire',col:'var(--tx2)'},
+    {label:'Bloqué',filter:t=>t.statut==='Bloqué',col:'var(--rd)'},
+    {label:'Terminé',filter:t=>t.statut==='Terminé',col:'var(--gn)'}];
+
+  var html='';
+  if(taskFilter!=='all'){
+    html=tasks.map(t=>taskHtml(t)).join('');
+  } else {
+    groups.forEach(g=>{
+      var gt=tasks.filter(g.filter);
+      if(!gt.length)return;
+      html+=`<div style="font-size:11px;color:${g.col};margin:12px 0 6px;font-weight:500">${g.label} · ${gt.length}</div>`;
+      html+=gt.map(t=>taskHtml(t)).join('');
+    });
+  }
+  el.innerHTML=html||'<div style="color:var(--tx2);font-size:12px;padding:20px 0;text-align:center">Aucune tâche</div>';
+}
+
+function taskHtml(t){
+  var proj=DB.projets.find(p=>p.id===t.projetId);
+  var ds=dateStatus(t.fin,t.statut==='Terminé');
+  var done=t.statut==='Terminé';
+  var statusClass=done?'done':t.statut==='Bloqué'?'block':'prog';
+  return `<div class="row">
+    <div class="ric ${statusClass}" onclick="toggleTask('${t.id}')" style="cursor:pointer"></div>
+    <span class="rn${done?' dim':''}">${esc(t.titre)}</span>
+    ${t.assignee?`<span style="font-size:10px;color:var(--tx2)">${esc(t.assignee)}</span>`:''}
+    ${t.fin?`<span class="rt ${ds}">${dateLabel(t.fin,done)}</span>`:''}
+    <button style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:13px;padding:2px" onclick="editTask('${t.id}')">✏</button>
+    <button style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:13px;padding:2px" onclick="deleteTask('${t.id}')">✕</button>
+  </div>`;
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────────────
+function renderDashboard(){
+  // Projects
+  var pp=document.getElementById('dash-projects');
+  if(!DB.projets.length){pp.innerHTML='<div style="color:var(--tx2);font-size:12px;padding:10px 0">Aucun projet</div>';return;}
+  pp.innerHTML=DB.projets.map(p=>{
+    var tasks=DB.taches.filter(t=>t.projetId===p.id);
+    var done=tasks.filter(t=>t.statut==='Terminé').length;
+    var pct=tasks.length?Math.round(done/tasks.length*100):0;
+    return `<div class="proj-row">
+      <div class="proj-dot" style="background:var(--tx2)"></div>
+      <span class="proj-name">${esc(p.nom)}</span>
+      <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%"></div></div>
+      <span class="proj-pct">${pct}%</span>
+    </div>`;
+  }).join('');
+
+  // Urgent
+  var uu=document.getElementById('dash-urgent');
+  var urgent=DB.taches.filter(t=>t.statut!=='Terminé'&&t.fin).sort((a,b)=>new Date(a.fin)-new Date(b.fin)).slice(0,5);
+  if(!urgent.length){uu.innerHTML='<div style="color:var(--tx2);font-size:12px;padding:10px 0">Aucune urgence</div>';return;}
+  uu.innerHTML=urgent.map(t=>{
+    var ds=dateStatus(t.fin,false);
+    var sClass=t.statut==='Bloqué'?'block':'prog';
+    return `<div class="row">
+      <div class="ric ${sClass}"></div>
+      <span class="rn">${esc(t.titre)}</span>
+      <span class="rt ${ds}">${dateLabel(t.fin,false)}</span>
+    </div>`;
+  }).join('');
+}
+
+function updateStats(){
+  document.getElementById('m-tasks').textContent=DB.taches.length;
+  document.getElementById('m-late').textContent=DB.taches.filter(t=>{var d=daysDiff(t.fin);return d!==null&&d<0&&t.statut!=='Terminé';}).length;
+  document.getElementById('m-proj').textContent=DB.projets.length;
+  document.getElementById('m-done').textContent=DB.taches.filter(t=>t.statut==='Terminé').length;
+}
+
+// ── EMAIL REPLY ────────────────────────────────────────────────────
+function setMode(m, btn){
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  emailMode=m;
+  document.getElementById('mode-paste').style.display=m==='paste'?'block':'none';
+  document.getElementById('mode-photo').style.display=m==='photo'?'block':'none';
+  document.getElementById('reply-out').style.display='none';
+}
+
+function setTone(btn){
+  document.querySelectorAll('#tone-group .tone').forEach(t=>t.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+async function pasteFromClipboard(){
+  try{
+    var text=await navigator.clipboard.readText();
+    if(text){
+      document.getElementById('paste-placeholder').style.display='none';
+      document.getElementById('paste-content').style.display='block';
+      document.getElementById('paste-content').textContent=text;
+    }
+  }catch(e){alert('Autorise l\'accès au presse-papier dans ton navigateur.');}
+}
+
+function handlePhoto(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  document.getElementById('photo-name').textContent=file.name;
+  document.getElementById('photo-empty').style.display='none';
+  document.getElementById('photo-prev').style.display='flex';
+  // Read as base64
+  var reader=new FileReader();
+  reader.onload=e=>{currentPhotoData=e.target.result.split(',')[1];};
+  reader.readAsDataURL(file);
+}
+
+function getEmailText(){
+  if(emailMode==='paste'){
+    return document.getElementById('paste-content').textContent||document.getElementById('paste-placeholder').textContent;
+  }
+  return currentPhotoData?'[Image de l\'email joint]':'';
+}
+
+function generateReply(){
+  var ton=document.querySelector('#tone-group .tone.on')?.textContent||'Professionnel';
+  var length=document.getElementById('email-length').value;
+  var context=document.getElementById('email-context').value;
+  var emailText=getEmailText();
+
+  if(!emailText||emailText.includes('Appuie longuement')){alert('Colle d\'abord le contenu de l\'email ou prends une photo');return;}
+
+  document.getElementById('reply-think').style.display='flex';
+  document.getElementById('reply-out').style.display='none';
+
+  var messages=[{role:'user',content:'Email reçu:\n\n'+emailText+'\n\n'+(context?'Contexte / instruction: '+context+'\n\n':'')+
+    'Génère une réponse de longueur '+length+' avec un ton '+ton+'. Réponds directement avec la réponse email, sans explication.'}];
+
+  // If photo mode, include image
+  if(emailMode==='photo'&&currentPhotoData){
+    messages=[{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:'image/jpeg',data:currentPhotoData}},
+      {type:'text',text:'Lis cet email sur la photo et génère une réponse '+(context?'en tenant compte de ceci: '+context+'. ':'')+
+        'Ton: '+ton+'. Longueur: '+length+'. Réponds directement avec la réponse email.'}
+    ]}];
+  }
+
+  fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({system:'Tu es un assistant expert en communication professionnelle. Tu rédiges des réponses email claires, adaptées au ton demandé, en français.',
+      max_tokens:800, messages})
+  }).then(r=>r.json()).then(d=>{
+    document.getElementById('reply-think').style.display='none';
+    var text=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    if(d.error)throw new Error(d.error.message);
+    document.getElementById('reply-body').textContent=text;
+    document.getElementById('reply-out').style.display='block';
+    scrollTo(document.getElementById('reply-out'));
+  }).catch(e=>{document.getElementById('reply-think').style.display='none';alert('Erreur: '+e.message);});
+}
+
+// ── COMPTE RENDU ──────────────────────────────────────────────────
+function generateCR(){
+  var points=document.getElementById('cr-points').value.trim();
+  if(!points){alert('Saisis au moins les points abordés');return;}
+  var sel=document.getElementById('cr-projet');
+  var projNom=sel.options[sel.selectedIndex].text;
+  var date=document.getElementById('cr-date').value;
+  var type=document.getElementById('cr-type').value;
+  var participants=document.getElementById('cr-participants').value;
+  var actions=document.getElementById('cr-actions').value;
+
+  document.getElementById('cr-think').style.display='flex';
+  document.getElementById('cr-result').style.display='none';
+
+  fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({system:'Tu es expert en gestion de projets. Tu rédiges des comptes rendus professionnels, concis et bien structurés en français.',
+      max_tokens:2000,
+      messages:[{role:'user',content:`Génère un compte rendu professionnel.\nType: ${type}\nProjet: ${projNom}\nDate: ${fmt(date)}\nParticipants: ${participants||'Non précisés'}\nPoints abordés: ${points}\n${actions?'Actions: '+actions:''}\n\nFormat: en-tête clair, points discutés structurés, décisions prises, tableau actions Qui/Quoi/Quand, clôture. Séparateurs visuels (---) pour la lisibilité.`}]
+    })
+  }).then(r=>r.json()).then(d=>{
+    document.getElementById('cr-think').style.display='none';
+    var text=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    if(d.error)throw new Error(d.error.message);
+    document.getElementById('cr-out-title').textContent=type+' — '+fmt(date);
+    document.getElementById('cr-out-meta').textContent=projNom+(participants?' · '+participants:'');
+    document.getElementById('cr-out').textContent=text;
+    document.getElementById('cr-result').style.display='block';
+    scrollTo(document.getElementById('cr-result'));
+  }).catch(e=>{document.getElementById('cr-think').style.display='none';alert('Erreur: '+e.message);});
+}
+
+// ── DOCUMENTS ──────────────────────────────────────────────────────
+document.querySelectorAll('#doc-action-pills .pill').forEach(p=>{
+  p.onclick=()=>{
+    document.querySelectorAll('#doc-action-pills .pill').forEach(x=>x.classList.remove('on'));
+    p.classList.add('on');
+    document.getElementById('doc-custom-q').style.display=p.dataset.action==='custom'?'block':'none';
+  };
+});
+
+function handleDocFile(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  currentDocName=file.name;
+  document.getElementById('doc-filename').textContent=file.name;
+  document.getElementById('doc-filesize').textContent='Chargement...';
+  document.getElementById('doc-drop-zone').style.display='none';
+  document.getElementById('doc-file-info').style.display='flex';
+  document.getElementById('doc-actions').style.display='block';
+  document.getElementById('doc-result').style.display='none';
+
+  var fd=new FormData();fd.append('file',file);
+  fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{
+    if(d.error){alert('Erreur: '+d.error);resetDoc();return;}
+    currentDocText=d.text;
+    document.getElementById('doc-filesize').textContent=d.chars.toLocaleString()+' caractères extraits'+(d.truncated?' (tronqué)':'');
+  }).catch(e=>{alert('Erreur upload: '+e.message);resetDoc();});
+}
+
+function resetDoc(){
+  currentDocText='';currentDocName='';
+  document.getElementById('doc-input').value='';
+  document.getElementById('doc-drop-zone').style.display='block';
+  document.getElementById('doc-file-info').style.display='none';
+  document.getElementById('doc-actions').style.display='none';
+  document.getElementById('doc-result').style.display='none';
+}
+
+function analyzeDoc(){
+  if(!currentDocText){alert('Attends que le fichier soit chargé');return;}
+  var action=document.querySelector('#doc-action-pills .pill.on')?.dataset.action||'resume';
+  var prompts={
+    resume:'Rédige un résumé exécutif concis et professionnel. Identifie les points essentiels, conclusions et recommandations.',
+    points:'Extrais les points clés sous forme de liste structurée et hiérarchisée.',
+    action:'Identifie toutes les actions, tâches et décisions nécessitant un suivi. Présente sous forme de tableau Qui / Quoi / Quand.',
+    risks:'Analyse les risques, problèmes et alertes mentionnés.',
+    custom:document.getElementById('doc-question').value||'Analyse ce document.'
+  };
+  var actionLabels={resume:'Résumé exécutif',points:'Points clés',action:'Plan d\'action',risks:'Analyse des risques',custom:'Analyse personnalisée'};
+
+  document.getElementById('doc-think').style.display='flex';
+  document.getElementById('doc-result').style.display='none';
+
+  fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({system:'Tu es expert en analyse de documents. Réponds en français, structuré et professionnel.',
+      max_tokens:2500,
+      messages:[{role:'user',content:`Document: "${currentDocName}"\n\n${currentDocText}\n\n---\n\nInstruction: ${prompts[action]}`}]
+    })
+  }).then(r=>r.json()).then(d=>{
+    document.getElementById('doc-think').style.display='none';
+    var text=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    if(d.error)throw new Error(d.error.message);
+    document.getElementById('doc-out-title').textContent=actionLabels[action];
+    document.getElementById('doc-out').textContent=text;
+    document.getElementById('doc-result').style.display='block';
+    scrollTo(document.getElementById('doc-result'));
+  }).catch(e=>{document.getElementById('doc-think').style.display='none';alert('Erreur: '+e.message);});
+}
+
+// ── RAPPORT ────────────────────────────────────────────────────────
+function generateReport(){
+  if(!DB.taches.length){alert('Ajoute des tâches pour générer un rapport');return;}
+  document.getElementById('report-think').style.display='flex';
+  document.getElementById('report-result').style.display='none';
+  var late=DB.taches.filter(t=>{var d=daysDiff(t.fin);return d!==null&&d<0&&t.statut!=='Terminé';});
+  var ctx=`Total tâches: ${DB.taches.length} | Terminées: ${DB.taches.filter(t=>t.statut==='Terminé').length} | En cours: ${DB.taches.filter(t=>t.statut==='En cours').length} | En retard: ${late.length}\n\n`;
+  ctx+=DB.taches.map(t=>{var p=DB.projets.find(x=>x.id===t.projetId);return`- ${t.titre} | ${p?p.nom:'Sans projet'} | ${t.statut} | ${t.pct}% | ${t.fin?fmt(t.fin):'N/A'}`;}).join('\n');
+  fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({system:'Tu es expert en gestion de projets. Génère des rapports de statut professionnels en français.',
+      max_tokens:1500,
+      messages:[{role:'user',content:`Génère un rapport de statut projet professionnel au ${fmt(today())}:\n\n${ctx}\n\nInclus: résumé exécutif, état par projet, alertes, recommandations.`}]
+    })
+  }).then(r=>r.json()).then(d=>{
+    document.getElementById('report-think').style.display='none';
+    var text=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    if(d.error)throw new Error(d.error.message);
+    document.getElementById('report-text').textContent=text;
+    document.getElementById('report-result').style.display='block';
+  }).catch(e=>{document.getElementById('report-think').style.display='none';alert('Erreur: '+e.message);});
+}
+
+// ── GANTT ──────────────────────────────────────────────────────────
+function setGanttLevel(l,btn){
+  ganttLevel=l;
+  document.querySelectorAll('#view-gantt .pill').forEach(p=>p.classList.remove('on'));
+  btn.classList.add('on');
+  renderGantt();
+}
+
+function renderGantt(){
+  var wrap=document.getElementById('gantt-wrap');
+  var tasks=DB.taches.filter(t=>t.debut&&t.fin);
+  if(!tasks.length){wrap.innerHTML='<div style="color:var(--tx2);font-size:12px;padding:20px 0;text-align:center">Ajoute des tâches avec des dates début et fin</div>';return;}
+  var minD=tasks.reduce((m,t)=>t.debut<m?t.debut:m,tasks[0].debut);
+  var maxD=tasks.reduce((m,t)=>t.fin>m?t.fin:m,tasks[0].fin);
+  var start=new Date(minD);start.setDate(start.getDate()-1);
+  var end=new Date(maxD);end.setDate(end.getDate()+2);
+  var totalDays=Math.ceil((end-start)/864e5);
+  var rowH=ganttLevel==='simple'?28:36,labelW=90,dayW=ganttLevel==='simple'?20:28;
+  var svgW=labelW+totalDays*dayW,svgH=28+tasks.length*rowH+20;
+  var todayX=Math.ceil((new Date(today())-start)/864e5)*dayW;
+  var months=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  var isDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+  var bgCol=isDark?'#0f0f0f':'#f9f9f9';
+  var rowBg=isDark?'#1a1a1a':'#ffffff';
+  var altBg=isDark?'#111111':'#f5f5f5';
+  var textCol=isDark?'#9ca3af':'#6b7280';
+  var txCol=isDark?'#f5f5f5':'#111111';
+  var lineCol=isDark?'#2a2a2a':'#e5e5e5';
+
+  var svg=`<svg width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,sans-serif">`;
+  svg+=`<rect width="${svgW}" height="${svgH}" fill="${bgCol}"/>`;
+
+  // Header days
+  var cur=new Date(start),x=labelW;
+  while(cur<=end){
+    if(cur.getDate()===1||x===labelW){
+      svg+=`<text x="${x+dayW/2}" y="14" text-anchor="middle" fill="${textCol}" font-size="8">${months[cur.getMonth()]}</text>`;
+    }
+    svg+=`<line x1="${x}" y1="0" x2="${x}" y2="${svgH}" stroke="${lineCol}" stroke-width="0.5"/>`;
+    cur.setDate(cur.getDate()+1);x+=dayW;
+  }
+  svg+=`<rect x="0" y="0" width="${labelW}" height="${svgH}" fill="${bgCol}"/>`;
+  svg+=`<line x1="0" y1="20" x2="${svgW}" y2="20" stroke="${lineCol}" stroke-width="0.5"/>`;
+  svg+=`<line x1="${labelW}" y1="0" x2="${labelW}" y2="${svgH}" stroke="${lineCol}" stroke-width="1"/>`;
+
+  // Today line
+  if(todayX>0&&todayX<totalDays*dayW){
+    var tx=labelW+todayX;
+    svg+=`<line x1="${tx}" y1="0" x2="${tx}" y2="${svgH}" stroke="#6366f1" stroke-width="1" stroke-dasharray="3,3" opacity="0.6"/>`;
+  }
+
+  // Bars
+  var statusColors={'Terminé':'#374151','En cours':'#6366f1','Bloqué':'#ef4444','À faire':'#9ca3af'};
+  tasks.forEach((t,i)=>{
+    var y=20+i*rowH;
+    var bx=labelW+Math.ceil((new Date(t.debut)-start)/864e5)*dayW;
+    var bw=Math.max(dayW,Math.ceil((new Date(t.fin)-new Date(t.debut))/864e5+1)*dayW);
+    var col=dateStatus(t.fin,t.statut==='Terminé')==='late'?'#ef4444':(statusColors[t.statut]||'#9ca3af');
+    var pctW=bw*(t.pct/100);
+    svg+=`<rect x="0" y="${y}" width="${svgW}" height="${rowH}" fill="${i%2===0?rowBg:altBg}"/>`;
+    var lbl=t.titre.length>12?t.titre.substr(0,11)+'…':t.titre;
+    svg+=`<text x="6" y="${y+rowH/2+4}" fill="${txCol}" font-size="10">${esc(lbl)}</text>`;
+    svg+=`<rect x="${bx}" y="${y+4}" width="${bw}" height="${rowH-8}" rx="3" fill="${col}" opacity="0.2"/>`;
+    if(pctW>0)svg+=`<rect x="${bx}" y="${y+4}" width="${pctW}" height="${rowH-8}" rx="3" fill="${col}" opacity="0.7"/>`;
+    if(bw>24)svg+=`<text x="${bx+bw/2}" y="${y+rowH/2+4}" text-anchor="middle" fill="#fff" font-size="9" font-weight="500">${t.statut==='Terminé'?'✓':t.pct+'%'}</text>`;
+    svg+=`<line x1="0" y1="${y+rowH}" x2="${svgW}" y2="${y+rowH}" stroke="${lineCol}" stroke-width="0.5"/>`;
+  });
+  svg+=`</svg>`;
+
+  wrap.innerHTML=`<div style="overflow-x:auto">${svg}</div>
+  <div class="g-legend">
+    <div class="g-leg"><div class="g-leg-dot" style="background:#374151"></div>Terminé</div>
+    <div class="g-leg"><div class="g-leg-dot" style="background:#6366f1"></div>En cours</div>
+    <div class="g-leg"><div class="g-leg-dot" style="background:#ef4444"></div>Retard / Bloqué</div>
+    <div class="g-leg"><div class="g-leg-dot" style="background:#9ca3af"></div>À faire</div>
+  </div>`;
+}
+
+// ── EXCEL EXPORTS ──────────────────────────────────────────────────
+function exportTasksExcel(){
+  if(!DB.taches.length){alert('Aucune tâche');return;}
+  var wb=XLSX.utils.book_new();
+  var data=[['Tâche','Projet','Assigné','Priorité','Début','Deadline','Avancement','Statut','Notes']];
+  DB.taches.forEach(t=>{var p=DB.projets.find(x=>x.id===t.projetId);data.push([t.titre,p?p.nom:'',t.assignee||'',t.priorite,t.debut||'',t.fin||'',t.pct+'%',t.statut,t.notes||'']);});
+  var ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:30},{wch:20},{wch:14},{wch:10},{wch:12},{wch:12},{wch:12},{wch:12},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws,'Tâches');XLSX.writeFile(wb,'taches_'+today()+'.xlsx');
+}
+
+function exportLateExcel(){
+  var late=DB.taches.filter(t=>{var d=daysDiff(t.fin);return d!==null&&d<0&&t.statut!=='Terminé';});
+  if(!late.length){alert('Aucune tâche en retard 🎉');return;}
+  var wb=XLSX.utils.book_new();
+  var data=[['Tâche','Projet','Assigné','Deadline','Retard (j)','Priorité','Avancement']];
+  late.forEach(t=>{var p=DB.projets.find(x=>x.id===t.projetId);data.push([t.titre,p?p.nom:'',t.assignee||'',t.fin,Math.abs(daysDiff(t.fin)),t.priorite,t.pct+'%']);});
+  var ws=XLSX.utils.aoa_to_sheet(data);XLSX.utils.book_append_sheet(wb,ws,'Retards');XLSX.writeFile(wb,'retards_'+today()+'.xlsx');
+}
+
+function exportCRExcel(){
+  var txt=document.getElementById('cr-out').textContent;if(!txt)return;
+  var wb=XLSX.utils.book_new();
+  var data=[[document.getElementById('cr-out-title').textContent],[document.getElementById('cr-out-meta').textContent],['']];
+  txt.split('\n').forEach(l=>data.push([l]));
+  var ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:80}];
+  XLSX.utils.book_append_sheet(wb,ws,'CR');XLSX.writeFile(wb,'CR_'+today()+'.xlsx');
+}
+
+function exportDocExcel(){
+  var txt=document.getElementById('doc-out').textContent;if(!txt)return;
+  var wb=XLSX.utils.book_new();
+  var data=[[document.getElementById('doc-out-title').textContent],[currentDocName],['']];
+  txt.split('\n').forEach(l=>data.push([l]));
+  var ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:80}];
+  XLSX.utils.book_append_sheet(wb,ws,'Analyse');XLSX.writeFile(wb,'analyse_'+today()+'.xlsx');
+}
+
+function exportGanttSVG(){
+  var svgEl=document.querySelector('#gantt-wrap svg');if(!svgEl){alert('Génère d\'abord le Gantt');return;}
+  var blob=new Blob([svgEl.outerHTML],{type:'image/svg+xml'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gantt_'+today()+'.svg';a.click();
+}
+
+function exportGanttExcel(){
+  var tasks=DB.taches.filter(t=>t.debut&&t.fin);if(!tasks.length){alert('Aucune tâche avec dates');return;}
+  var wb=XLSX.utils.book_new();
+  var data=[['Tâche','Projet','Assigné','Début','Fin','Avancement','Statut']];
+  tasks.forEach(t=>{var p=DB.projets.find(x=>x.id===t.projetId);data.push([t.titre,p?p.nom:'',t.assignee||'',t.debut,t.fin,t.pct+'%',t.statut]);});
+  var ws=XLSX.utils.aoa_to_sheet(data);XLSX.utils.book_append_sheet(wb,ws,'Gantt');XLSX.writeFile(wb,'gantt_'+today()+'.xlsx');
+}
+
+// ── EMAIL ──────────────────────────────────────────────────────────
+function copyText(id){
+  var txt=document.getElementById(id).textContent;
+  navigator.clipboard.writeText(txt).then(()=>alert('Copié !')).catch(()=>{});
+}
+
+function emailContent(sourceId, defaultSubject){
+  var txt=document.getElementById(sourceId).textContent;if(!txt){alert('Aucun contenu');return;}
+  currentEmailContent=txt;
+  document.getElementById('email-subj').value=defaultSubject+' — '+fmt(today());
+  document.getElementById('email-preview-box').textContent=txt.substr(0,200)+(txt.length>200?'...':'');
+  document.getElementById('email-status').textContent='';
+  document.getElementById('modal-email').classList.add('open');
+}
+
+function sendEmail(){
+  var to=document.getElementById('email-to').value.trim();
+  var subj=document.getElementById('email-subj').value.trim();
+  if(!to){alert('Ajoute un destinataire');return;}
+  document.getElementById('email-status').textContent='Envoi en cours...';
+  fetch('/api/gmail/send',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({to,subject:subj,body:currentEmailContent})
+  }).then(r=>r.json()).then(d=>{
+    if(d.sent||d.message){document.getElementById('email-status').textContent='✓ Envoyé';setTimeout(()=>closeModal('modal-email'),1200);}
+    else document.getElementById('email-status').textContent='Erreur: '+(d.error||'Inconnue');
+  }).catch(()=>{document.getElementById('email-status').textContent='Serveur inaccessible';});
+}
+
+// ── HEALTH ────────────────────────────────────────────────────────
+function checkServer(){
+  fetch('/health').then(r=>r.json()).then(d=>{
+    var dot=document.getElementById('sdot');
+    dot.className='status-dot '+(d.api_key_configured?'ok':'err');
+  }).catch(()=>{document.getElementById('sdot').className='status-dot err';});
+}
+
+// ── PWA ────────────────────────────────────────────────────────────
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}
+
+// ── INIT ──────────────────────────────────────────────────────────
+checkServer();
+updateStats();
+renderDashboard();
+populateCRProjet();
+</script>
+</body>
+</html>
