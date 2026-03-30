@@ -214,7 +214,7 @@ input[type=number]{-moz-appearance:textfield;}
 
 <div class="nav">
   <div class="nt on" onclick="showTab('dash',this)">Vue d'ensemble</div>
-  <div class="nt" onclick="showTab('email',this)">Répondre</div>
+  <div class="nt" onclick="showTab('email',this)">Emails IA</div>
   <div class="nt" onclick="showTab('tasks',this)">Tâches</div>
   <div class="nt" onclick="showTab('cr',this)">Compte rendu</div>
   <div class="nt" onclick="showTab('docs',this)">Documents</div>
@@ -258,8 +258,16 @@ input[type=number]{-moz-appearance:textfield;}
   <div style="height:30px"></div>
 </div>
 
-<!-- EMAIL REPLY -->
+<!-- EMAIL IA -->
 <div class="view" id="view-email">
+  <!-- Sub-tab: Répondre / Améliorer -->
+  <div class="mode-toggle" style="margin-bottom:16px">
+    <div class="mode-btn on" onclick="setEmailTab('reply',this)">Répondre à un email</div>
+    <div class="mode-btn" onclick="setEmailTab('improve',this)">Améliorer mon email</div>
+  </div>
+
+  <!-- ══ REPLY PANEL ══ -->
+  <div id="email-reply-panel">
   <div class="s">Mode de saisie</div>
   <div class="mode-toggle">
     <div class="mode-btn on" onclick="setMode('paste',this)">Coller le texte</div>
@@ -339,6 +347,69 @@ input[type=number]{-moz-appearance:textfield;}
     </div>
   </div>
   <div style="height:30px"></div>
+  </div><!-- /email-reply-panel -->
+
+  <!-- ══ IMPROVE PANEL ══ -->
+  <div id="email-improve-panel" style="display:none">
+    <div class="field">
+      <span class="fl">Colle ton email à améliorer</span>
+      <textarea class="fi fi-ta" id="improve-input" rows="6" style="min-height:120px" placeholder="Colle ici le texte de ton email brouillon..."></textarea>
+    </div>
+
+    <div class="s">Objectifs d'amélioration</div>
+    <div class="pills" id="improve-goals" style="margin-bottom:14px">
+      <div class="pill on" data-goal="professionnel">Professionnel</div>
+      <div class="pill" data-goal="clair">Plus clair</div>
+      <div class="pill" data-goal="concis">Plus concis</div>
+      <div class="pill" data-goal="persuasif">Persuasif</div>
+      <div class="pill" data-goal="formel">Formel</div>
+      <div class="pill" data-goal="cordial">Cordial</div>
+    </div>
+
+    <div class="frow2" style="margin-bottom:14px">
+      <div>
+        <div class="ctx-lbl">Destinataire</div>
+        <input type="text" class="fi" id="improve-recipient" placeholder="Ex: client, manager, équipe">
+      </div>
+      <div>
+        <div class="ctx-lbl">Contexte (optionnel)</div>
+        <input type="text" class="fi" id="improve-context" placeholder="Ex: relance, négociation">
+      </div>
+    </div>
+
+    <button class="pbtn" onclick="improveEmail()">Améliorer l'email</button>
+
+    <div id="improve-think" style="display:none" class="think"><span>✦</span><span>Amélioration en cours...</span><span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
+
+    <div id="improve-result" style="display:none">
+      <!-- Side by side diff view -->
+      <div style="margin-top:14px">
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Comparaison avant / après</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div>
+            <div style="font-size:10px;color:var(--tx2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px">Avant</div>
+            <div id="improve-before" style="background:var(--s);border-radius:8px;padding:12px;font-size:12px;color:var(--tx2);line-height:1.7;max-height:180px;overflow-y:auto;border-left:2px solid var(--bd2)"></div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--gn);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px">Après</div>
+            <div id="improve-after" style="background:var(--s);border-radius:8px;padding:12px;font-size:12px;color:var(--tx);line-height:1.7;max-height:180px;overflow-y:auto;border-left:2px solid var(--gn)"></div>
+          </div>
+        </div>
+        <!-- Explanation -->
+        <div id="improve-explanation" style="background:var(--s);border-radius:8px;padding:12px;font-size:12px;color:var(--tx2);line-height:1.7;border-left:2px solid var(--pu)">
+          <div style="font-size:10px;color:var(--pu);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px">Modifications apportées</div>
+          <div id="improve-expl-text"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--bd)">
+          <button class="obtn" onclick="copyText('improve-after')">📋 Copier la version améliorée</button>
+          <button class="obtn" onclick="improveEmail()">↺ Réessayer</button>
+          <button class="obtn p" onclick="emailContent('improve-after','Email amélioré')">📧 Email</button>
+        </div>
+      </div>
+    </div>
+    <div style="height:30px"></div>
+  </div><!-- /email-improve-panel -->
+
 </div>
 
 <!-- TÂCHES -->
@@ -742,6 +813,73 @@ function updateStats(){
   document.getElementById('m-late').textContent=DB.taches.filter(t=>{var d=daysDiff(t.fin);return d!==null&&d<0&&t.statut!=='Terminé';}).length;
   document.getElementById('m-proj').textContent=DB.projets.length;
   document.getElementById('m-done').textContent=DB.taches.filter(t=>t.statut==='Terminé').length;
+}
+
+// ── EMAIL TABS ────────────────────────────────────────────────────
+function setEmailTab(tab, btn){
+  document.querySelectorAll('#view-email .mode-toggle:first-child .mode-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('email-reply-panel').style.display=tab==='reply'?'block':'none';
+  document.getElementById('email-improve-panel').style.display=tab==='improve'?'block':'none';
+}
+
+// ── EMAIL IMPROVE ──────────────────────────────────────────────────
+document.querySelectorAll('#improve-goals .pill').forEach(p=>{
+  p.onclick=()=>{
+    // allow multi-select
+    p.classList.toggle('on');
+  };
+});
+
+function improveEmail(){
+  var text=document.getElementById('improve-input').value.trim();
+  if(!text){alert('Colle d'abord ton email à améliorer');return;}
+  var goals=Array.from(document.querySelectorAll('#improve-goals .pill.on')).map(p=>p.dataset.goal).join(', ');
+  var recipient=document.getElementById('improve-recipient').value;
+  var context=document.getElementById('improve-context').value;
+
+  document.getElementById('improve-think').style.display='flex';
+  document.getElementById('improve-result').style.display='none';
+
+  var prompt=`Améliore cet email en le rendant ${goals||'professionnel'}.
+${recipient?'Destinataire : '+recipient:''}
+${context?'Contexte : '+context:''}
+
+Email original :
+"""
+${text}
+"""
+
+Réponds UNIQUEMENT avec un JSON valide :
+{"improved":"texte de l'email amélioré complet","changes":"liste des modifications apportées en 3-5 points concis"}
+
+Ne mets rien d'autre que le JSON.`;
+
+  fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      system:'Tu es un expert en communication professionnelle écrite. Tu améliores les emails en les rendant plus clairs, professionnels et efficaces. Réponds toujours en JSON valide.',
+      max_tokens:1500,
+      messages:[{role:'user',content:prompt}]
+    })
+  }).then(r=>r.json()).then(d=>{
+    document.getElementById('improve-think').style.display='none';
+    var raw=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    if(d.error)throw new Error(d.error.message);
+    try{
+      var parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+      document.getElementById('improve-before').textContent=text;
+      document.getElementById('improve-after').textContent=parsed.improved||raw;
+      document.getElementById('improve-expl-text').textContent=parsed.changes||'';
+      document.getElementById('improve-result').style.display='block';
+      scrollTo(document.getElementById('improve-result'));
+    } catch(e){
+      // Fallback: show raw result
+      document.getElementById('improve-before').textContent=text;
+      document.getElementById('improve-after').textContent=raw;
+      document.getElementById('improve-expl-text').textContent='';
+      document.getElementById('improve-result').style.display='block';
+    }
+  }).catch(e=>{document.getElementById('improve-think').style.display='none';alert('Erreur: '+e.message);});
 }
 
 // ── EMAIL REPLY ────────────────────────────────────────────────────
