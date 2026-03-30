@@ -261,7 +261,7 @@ input[type=number]{-moz-appearance:textfield;}
 <!-- EMAIL IA -->
 <div class="view" id="view-email">
   <!-- Sub-tab: Répondre / Améliorer -->
-  <div class="mode-toggle" style="margin-bottom:16px">
+  <div class="mode-toggle" id="email-tab-toggle" style="margin-bottom:16px">
     <div class="mode-btn on" onclick="setEmailTab('reply',this)">Répondre à un email</div>
     <div class="mode-btn" onclick="setEmailTab('improve',this)">Améliorer mon email</div>
   </div>
@@ -358,12 +358,12 @@ input[type=number]{-moz-appearance:textfield;}
 
     <div class="s">Objectifs d'amélioration</div>
     <div class="pills" id="improve-goals" style="margin-bottom:14px">
-      <div class="pill on" data-goal="professionnel">Professionnel</div>
-      <div class="pill" data-goal="clair">Plus clair</div>
-      <div class="pill" data-goal="concis">Plus concis</div>
-      <div class="pill" data-goal="persuasif">Persuasif</div>
-      <div class="pill" data-goal="formel">Formel</div>
-      <div class="pill" data-goal="cordial">Cordial</div>
+      <div class="pill on" data-goal="professionnel" onclick="toggleGoal(this)">Professionnel</div>
+      <div class="pill" data-goal="clair" onclick="toggleGoal(this)">Plus clair</div>
+      <div class="pill" data-goal="concis" onclick="toggleGoal(this)">Plus concis</div>
+      <div class="pill" data-goal="persuasif" onclick="toggleGoal(this)">Persuasif</div>
+      <div class="pill" data-goal="formel" onclick="toggleGoal(this)">Formel</div>
+      <div class="pill" data-goal="cordial" onclick="toggleGoal(this)">Cordial</div>
     </div>
 
     <div class="frow2" style="margin-bottom:14px">
@@ -817,19 +817,16 @@ function updateStats(){
 
 // ── EMAIL TABS ────────────────────────────────────────────────────
 function setEmailTab(tab, btn){
-  document.querySelectorAll('#view-email .mode-toggle:first-child .mode-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('#email-tab-toggle .mode-btn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
   document.getElementById('email-reply-panel').style.display=tab==='reply'?'block':'none';
   document.getElementById('email-improve-panel').style.display=tab==='improve'?'block':'none';
 }
 
 // ── EMAIL IMPROVE ──────────────────────────────────────────────────
-document.querySelectorAll('#improve-goals .pill').forEach(p=>{
-  p.onclick=()=>{
-    // allow multi-select
-    p.classList.toggle('on');
-  };
-});
+// improve-goals pills - multi-select (bound via onclick in HTML fallback)
+
+function toggleGoal(p){p.classList.toggle('on');}
 
 function improveEmail(){
   var text=document.getElementById('improve-input').value.trim();
