@@ -723,7 +723,7 @@ function toggleTask(id){
 
 function setTaskFilter(f,btn){
   taskFilter=f;
-  document.querySelectorAll('.pills .pill').forEach(p=>{if(p.closest('#view-tasks')?.querySelector('.pills')===p.parentElement)p.classList.remove('on');});
+  // task filter pills handled via setTaskFilter function
   btn.classList.add('on');
   renderTasks();
 }
@@ -830,7 +830,7 @@ function toggleGoal(p){p.classList.toggle('on');}
 
 function improveEmail(){
   var text=document.getElementById('improve-input').value.trim();
-  if(!text){alert('Colle d'abord ton email à améliorer');return;}
+  if(!text){alert('Colle ton email avant de générer');return;}
   var goals=Array.from(document.querySelectorAll('#improve-goals .pill.on')).map(p=>p.dataset.goal).join(', ');
   var recipient=document.getElementById('improve-recipient').value;
   var context=document.getElementById('improve-context').value;
@@ -902,7 +902,7 @@ async function pasteFromClipboard(){
       document.getElementById('paste-content').style.display='block';
       document.getElementById('paste-content').textContent=text;
     }
-  }catch(e){alert('Autorise l\'accès au presse-papier dans ton navigateur.');}
+  }catch(e){alert('Autorise acces au presse-papier dans le navigateur');}
 }
 
 function handlePhoto(input){
@@ -925,12 +925,12 @@ function getEmailText(){
 }
 
 function generateReply(){
-  var ton=document.querySelector('#tone-group .tone.on')?.textContent||'Professionnel';
+  var tonEl=document.querySelector('#tone-group .tone.on');var ton=tonEl?tonEl.textContent:'Professionnel';
   var length=document.getElementById('email-length').value;
   var context=document.getElementById('email-context').value;
   var emailText=getEmailText();
 
-  if(!emailText||emailText.includes('Appuie longuement')){alert('Colle d\'abord le contenu de l\'email ou prends une photo');return;}
+  if(!emailText||emailText.includes('Appuie longuement')){alert('Colle le contenu de l email ou prends une photo');return;}
 
   document.getElementById('reply-think').style.display='flex';
   document.getElementById('reply-out').style.display='none';
@@ -963,7 +963,7 @@ function generateReply(){
 // ── COMPTE RENDU ──────────────────────────────────────────────────
 function generateCR(){
   var points=document.getElementById('cr-points').value.trim();
-  if(!points){alert('Saisis au moins les points abordés');return;}
+  if(!points){alert('Saisis les points de la reunion');return;}
   var sel=document.getElementById('cr-projet');
   var projNom=sel.options[sel.selectedIndex].text;
   var date=document.getElementById('cr-date').value;
@@ -992,13 +992,11 @@ function generateCR(){
 }
 
 // ── DOCUMENTS ──────────────────────────────────────────────────────
-document.querySelectorAll('#doc-action-pills .pill').forEach(p=>{
-  p.onclick=()=>{
-    document.querySelectorAll('#doc-action-pills .pill').forEach(x=>x.classList.remove('on'));
-    p.classList.add('on');
-    document.getElementById('doc-custom-q').style.display=p.dataset.action==='custom'?'block':'none';
-  };
-});
+function setDocAction(p){
+  document.querySelectorAll('#doc-action-pills .pill').forEach(function(x){x.classList.remove('on');});
+  p.classList.add('on');
+  document.getElementById('doc-custom-q').style.display=p.dataset.action==='custom'?'block':'none';
+}
 
 function handleDocFile(input){
   if(!input.files||!input.files[0])return;
@@ -1029,8 +1027,8 @@ function resetDoc(){
 }
 
 function analyzeDoc(){
-  if(!currentDocText){alert('Attends que le fichier soit chargé');return;}
-  var action=document.querySelector('#doc-action-pills .pill.on')?.dataset.action||'resume';
+  if(!currentDocText){alert('Fichier en cours de chargement...');return;}
+  var actionEl=document.querySelector('#doc-action-pills .pill.on');var action=actionEl?actionEl.dataset.action:'resume';
   var prompts={
     resume:'Rédige un résumé exécutif concis et professionnel. Identifie les points essentiels, conclusions et recommandations.',
     points:'Extrais les points clés sous forme de liste structurée et hiérarchisée.',
@@ -1061,7 +1059,7 @@ function analyzeDoc(){
 
 // ── RAPPORT ────────────────────────────────────────────────────────
 function generateReport(){
-  if(!DB.taches.length){alert('Ajoute des tâches pour générer un rapport');return;}
+  if(!DB.taches.length){alert('Ajoute des taches pour generer un rapport');return;}
   document.getElementById('report-think').style.display='flex';
   document.getElementById('report-result').style.display='none';
   var late=DB.taches.filter(t=>{var d=daysDiff(t.fin);return d!==null&&d<0&&t.statut!=='Terminé';});
@@ -1161,7 +1159,7 @@ function renderGantt(){
 
 // ── EXCEL EXPORTS ──────────────────────────────────────────────────
 function exportTasksExcel(){
-  if(!DB.taches.length){alert('Aucune tâche');return;}
+  if(!DB.taches.length){alert('Aucune tache a exporter');return;}
   var wb=XLSX.utils.book_new();
   var data=[['Tâche','Projet','Assigné','Priorité','Début','Deadline','Avancement','Statut','Notes']];
   DB.taches.forEach(t=>{var p=DB.projets.find(x=>x.id===t.projetId);data.push([t.titre,p?p.nom:'',t.assignee||'',t.priorite,t.debut||'',t.fin||'',t.pct+'%',t.statut,t.notes||'']);});
@@ -1171,7 +1169,7 @@ function exportTasksExcel(){
 
 function exportLateExcel(){
   var late=DB.taches.filter(t=>{var d=daysDiff(t.fin);return d!==null&&d<0&&t.statut!=='Terminé';});
-  if(!late.length){alert('Aucune tâche en retard 🎉');return;}
+  if(!late.length){alert('Aucune tache en retard !');return;}
   var wb=XLSX.utils.book_new();
   var data=[['Tâche','Projet','Assigné','Deadline','Retard (j)','Priorité','Avancement']];
   late.forEach(t=>{var p=DB.projets.find(x=>x.id===t.projetId);data.push([t.titre,p?p.nom:'',t.assignee||'',t.fin,Math.abs(daysDiff(t.fin)),t.priorite,t.pct+'%']);});
@@ -1197,13 +1195,13 @@ function exportDocExcel(){
 }
 
 function exportGanttSVG(){
-  var svgEl=document.querySelector('#gantt-wrap svg');if(!svgEl){alert('Génère d\'abord le Gantt');return;}
+  var svgEl=document.querySelector('#gantt-wrap svg');if(!svgEl){alert('Genere d abord le Gantt');return;}
   var blob=new Blob([svgEl.outerHTML],{type:'image/svg+xml'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gantt_'+today()+'.svg';a.click();
 }
 
 function exportGanttExcel(){
-  var tasks=DB.taches.filter(t=>t.debut&&t.fin);if(!tasks.length){alert('Aucune tâche avec dates');return;}
+  var tasks=DB.taches.filter(t=>t.debut&&t.fin);if(!tasks.length){alert('Aucune tache avec des dates');return;}
   var wb=XLSX.utils.book_new();
   var data=[['Tâche','Projet','Assigné','Début','Fin','Avancement','Statut']];
   tasks.forEach(t=>{var p=DB.projets.find(x=>x.id===t.projetId);data.push([t.titre,p?p.nom:'',t.assignee||'',t.debut,t.fin,t.pct+'%',t.statut]);});
