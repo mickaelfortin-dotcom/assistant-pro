@@ -437,26 +437,66 @@ input[type=number]{-moz-appearance:textfield;}
 
 <!-- COMPTE RENDU -->
 <div class="view" id="view-cr">
-  <div class="frow2">
-    <div class="field"><span class="fl">Projet</span><select class="fi" id="cr-projet"><option value="">— Général —</option></select></div>
-    <div class="field"><span class="fl">Date</span><input type="date" class="fi" id="cr-date"></div>
+
+  <div class="mode-toggle" id="cr-tab-toggle" style="margin-bottom:16px">
+    <div class="mode-btn on" onclick="setCRTab('manual',this)">Saisie libre</div>
+    <div class="mode-btn" onclick="setCRTab('transcript',this)">Transcription audio</div>
   </div>
-  <div class="frow2">
-    <div class="field"><span class="fl">Type de réunion</span>
-      <select class="fi" id="cr-type">
-        <option>Réunion de suivi</option>
-        <option>Lancement projet</option>
-        <option>Point d'étape</option>
-        <option>Réunion client</option>
-        <option>Revue de sprint</option>
+
+  <!-- SAISIE LIBRE -->
+  <div id="cr-manual-panel">
+    <div class="frow2">
+      <div class="field"><span class="fl">Projet</span><select class="fi" id="cr-projet"><option value="">-- General --</option></select></div>
+      <div class="field"><span class="fl">Date</span><input type="date" class="fi" id="cr-date"></div>
+    </div>
+    <div class="frow2">
+      <div class="field"><span class="fl">Type de reunion</span>
+        <select class="fi" id="cr-type">
+          <option>Reunion de suivi</option><option>Lancement projet</option>
+          <option>Point etape</option><option>Reunion client</option>
+          <option>Revue de sprint</option><option>Comite de direction</option>
+          <option>Reunion commerciale</option><option>Reunion RH</option>
+        </select>
+      </div>
+      <div class="field"><span class="fl">Participants</span><input type="text" class="fi" id="cr-participants" placeholder="Marie, Jean..."></div>
+    </div>
+    <div class="field"><span class="fl">Points abordes</span><textarea class="fi fi-ta" id="cr-points" placeholder="Resume libre des echanges, decisions..."></textarea></div>
+    <div class="field"><span class="fl">Actions a suivre</span><textarea class="fi fi-ta" style="min-height:60px" id="cr-actions" placeholder="Qui fait quoi avant quand..."></textarea></div>
+    <button class="pbtn" onclick="generateCR('manual')">Generer le compte rendu</button>
+  </div>
+
+  <!-- TRANSCRIPTION -->
+  <div id="cr-transcript-panel" style="display:none">
+    <div class="frow2">
+      <div class="field"><span class="fl">Projet</span><select class="fi" id="cr-projet-t"><option value="">-- General --</option></select></div>
+      <div class="field"><span class="fl">Date</span><input type="date" class="fi" id="cr-date-t"></div>
+    </div>
+    <div class="field"><span class="fl">Type de reunion</span>
+      <select class="fi" id="cr-type-t" onchange="updateFormatPreview()">
+        <option value="suivi">Reunion de suivi</option>
+        <option value="lancement">Lancement de projet</option>
+        <option value="client">Reunion client</option>
+        <option value="sprint">Revue de sprint</option>
+        <option value="codir">Comite de direction</option>
+        <option value="commerciale">Reunion commerciale</option>
+        <option value="rh">Reunion RH</option>
+        <option value="standup">Daily standup</option>
       </select>
     </div>
-    <div class="field"><span class="fl">Participants</span><input type="text" class="fi" id="cr-participants" placeholder="Marie, Jean..."></div>
+    <div id="cr-format-preview" style="background:var(--s);border-left:2px solid var(--pu);border-radius:0 8px 8px 0;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--tx2);line-height:1.7"></div>
+    <div class="field"><span class="fl">Participants</span><input type="text" class="fi" id="cr-participants-t" placeholder="Marie, Jean, Thomas..."></div>
+    <div class="field">
+      <span class="fl">Retranscription audio</span>
+      <textarea class="fi fi-ta" id="cr-transcript" style="min-height:160px" placeholder="Colle ici ta retranscription — dictee vocale, transcription automatique, notes brutes...&#10;&#10;Ex: Marie: on a avance sur le module X, il reste 2 jours. Jean: la livraison est bloquee cote client..."></textarea>
+    </div>
+    <div class="field">
+      <span class="fl">Instructions supplementaires (optionnel)</span>
+      <input type="text" class="fi" id="cr-instructions" placeholder="Ex: format court, insister sur les risques, en anglais...">
+    </div>
+    <button class="pbtn" onclick="generateCR('transcript')">Structurer le compte rendu</button>
   </div>
-  <div class="field"><span class="fl">Points abordés</span><textarea class="fi fi-ta" id="cr-points" placeholder="Résumé libre des échanges, décisions, problèmes rencontrés..."></textarea></div>
-  <div class="field"><span class="fl">Actions à suivre</span><textarea class="fi fi-ta" style="min-height:60px" id="cr-actions" placeholder="Qui fait quoi avant quand..."></textarea></div>
-  <button class="pbtn" onclick="generateCR()">Générer le compte rendu</button>
-  <div id="cr-think" style="display:none" class="think"><span>✦</span><span>Rédaction du compte rendu...</span><span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
+
+  <div id="cr-think" style="display:none" class="think"><span>&#10022;</span><span>Redaction du compte rendu...</span><span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
   <div id="cr-result" style="display:none">
     <div class="out">
       <div class="out-title" id="cr-out-title">Compte rendu</div>
@@ -465,7 +505,7 @@ input[type=number]{-moz-appearance:textfield;}
       <div class="out-actions">
         <button class="obtn" onclick="copyText('cr-out')">Copier</button>
         <button class="obtn" onclick="exportCRExcel()">Excel</button>
-        <button class="obtn p" onclick="emailContent('cr-out','Compte rendu de réunion')">Envoyer par email</button>
+        <button class="obtn p" onclick="emailContent('cr-out','Compte rendu de reunion')">Envoyer par email</button>
       </div>
     </div>
   </div>
@@ -640,7 +680,7 @@ function showTab(id, btn){
   if(id==='dash'){renderDashboard();updateStats();}
   if(id==='tasks'){renderTasks();populateSelects();}
   if(id==='gantt'){renderGantt();}
-  if(id==='cr'){populateCRProjet();}
+  if(id==='cr'){populateCRProjet();updateFormatPreview();}
 }
 
 // ── MODALS ──────────────────────────────────────────────────────────
@@ -673,7 +713,14 @@ function populateSelects(){
 }
 function populateCRProjet(){
   populateSelects();
-  if(!document.getElementById('cr-date').value) document.getElementById('cr-date').value=today();
+  // Also populate transcript projet select
+  var selT = document.getElementById('cr-projet-t');
+  if (selT) {
+    selT.innerHTML = '<option value="">-- General --</option>' + DB.projets.map(function(p){return '<option value="'+p.id+'">'+esc(p.nom)+'</option>';}).join('');
+  }
+  if (!document.getElementById('cr-date').value) document.getElementById('cr-date').value = today();
+  if (!document.getElementById('cr-date-t').value) document.getElementById('cr-date-t').value = today();
+  updateFormatPreview();
 }
 
 // ── TASKS ──────────────────────────────────────────────────────────
@@ -1285,6 +1332,82 @@ function deleteProject(id){
   DB.projets=DB.projets.filter(p=>p.id!==id);
   DB.taches.forEach(t=>{if(t.projetId===id)t.projetId='';});
   DB.save();updateStats();renderDashboard();populateSelects();renderTasks();
+}
+
+// ── CR TEMPLATES ──────────────────────────────────────────────────
+var CR_FORMATS = {
+  suivi: {
+    label: 'Reunion de suivi',
+    freq: 'Hebdomadaire - 30 a 60 min',
+    sections: ['Rappel des actions precedentes (Fait / En cours / Non fait)','Avancement par tache et projet (% realise, ce qui reste)','Problemes et blocages identifies','Decisions prises avec le decideur','Plan action : tableau Qui / Quoi / Quand','Prochaine reunion (date et ordre du jour)'],
+    style: 'Professionnel et structure. Generer un tableau actions formate. Sections separees par ---'
+  },
+  lancement: {
+    label: 'Lancement de projet (Kick-off)',
+    freq: 'Unique - 60 a 120 min',
+    sections: ['Contexte et objectifs (pourquoi, resultats attendus)','Perimetre et livrables (inclus / exclus, criteres validation)','Planning et jalons cles avec dates cibles','Equipe et roles (sponsor, chef projet, contributeurs)','Risques identifies (probabilite, impact, mitigation)','Prochaines etapes immediates des 2 premieres semaines'],
+    style: 'Formel et detaille. Bonnes pratiques PMI. Inclure tableau RACI et tableau de risques'
+  },
+  client: {
+    label: 'Reunion client',
+    freq: 'Mensuelle ou bi-mensuelle - 45 a 90 min',
+    sections: ['Participants : equipe interne | representants client avec fonctions','Avancement et demonstrations depuis la derniere reunion','Demandes et attentes du client (nouvelles demandes, feedbacks)','Engagements pris des deux cotes avec dates fermes','Points ouverts et risques (questions en suspens)','Prochaine etape et date'],
+    style: 'Soigne et oriente service. Ce CR peut etre partage avec le client. Ton positif et professionnel'
+  },
+  sprint: {
+    label: 'Revue de sprint',
+    freq: 'Toutes les 2 semaines - 60 a 90 min',
+    sections: ['Sprint termine : objectif vs realise, stories completees / non completees','Demo et feedback des parties prenantes','Metriques : velocity realisee vs estimee','Retrospective Start Stop Continue : ce qui marche / a ameliorer / actions','Backlog prochain sprint : stories avec points et responsables'],
+    style: 'Agile et concis. Terminologie Scrum. Format adapte aux equipes de developpement'
+  },
+  codir: {
+    label: 'Comite de direction (CODIR)',
+    freq: 'Mensuelle - 2 a 3 heures',
+    sections: ['Tableau de bord strategique : KPIs vs objectifs avec indicateurs vert/orange/rouge','Points strategiques abordes : contexte, enjeux, positions exprimees','Decisions de direction actees avec decideur et date effet','Actions assignees aux directeurs : tableau Directeur / Action / Deadline','Points confidentiels si applicable'],
+    style: 'Formel et synthetique. Diffusion restreinte. Inclure tableau de bord chiffre'
+  },
+  commerciale: {
+    label: 'Reunion commerciale',
+    freq: 'Hebdomadaire ou bi-mensuelle - 45 a 60 min',
+    sections: ['Resultats vs objectifs : CA realise, taux transformation, comparaison N-1','Pipeline en cours : opportunites avec stade, montant, probabilite, date closing','Nouvelles pistes : leads entrants, contacts, RDV obtenus','Objections et blocages : affaires en risque, concurrents identifies','Actions et objectifs semaine suivante avec metriques individuelles'],
+    style: 'Dynamique et oriente resultats. Inclure tableau pipeline. Ton business energique'
+  },
+  rh: {
+    label: 'Reunion RH',
+    freq: 'Mensuelle - 60 min',
+    sections: ['Recrutements en cours : postes ouverts, candidatures, entretiens, offres','Formations et montee en competences : planifiees, certifications, besoins','Points individuels ou collectifs (sans nommer si confidentiel)','Decisions RH actees : promotions, mobilites, changements contrat','Plan action RH avec responsables et delais'],
+    style: 'Bienveillant et professionnel. Respecter confidentialite. Ne pas nommer sur situations sensibles'
+  },
+  standup: {
+    label: 'Daily standup',
+    freq: 'Quotidienne - 10 a 15 min max',
+    sections: ['Hier : ce que chaque membre a termine (1-2 lignes par personne)','Aujourd hui : taches prevues dans la journee (1-2 lignes par personne)','Blocages : impediments a resoudre en dehors du standup'],
+    style: 'Ultra-court. Format tableau par personne. Maximum 1 page. Aller droit au but'
+  }
+};
+
+function setCRTab(tab, btn) {
+  document.querySelectorAll('#cr-tab-toggle .mode-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  document.getElementById('cr-manual-panel').style.display = tab === 'manual' ? 'block' : 'none';
+  document.getElementById('cr-transcript-panel').style.display = tab === 'transcript' ? 'block' : 'none';
+  document.getElementById('cr-result').style.display = 'none';
+  if (tab === 'transcript') {
+    updateFormatPreview();
+    populateCRProjet();
+  }
+}
+
+function updateFormatPreview() {
+  var sel = document.getElementById('cr-type-t');
+  if (!sel) return;
+  var type = sel.value;
+  var fmt = CR_FORMATS[type];
+  if (!fmt) return;
+  var preview = document.getElementById('cr-format-preview');
+  if (!preview) return;
+  preview.innerHTML = '<span style="color:var(--pu);font-size:10px;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px">Format standard — ' + fmt.label + '</span>' +
+    fmt.sections.map(function(s){return '&bull; ' + s;}).join('<br>');
 }
 
 // ── HEALTH ────────────────────────────────────────────────────────
