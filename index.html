@@ -452,6 +452,7 @@ input[type=number]{-moz-appearance:textfield;}
     <div class="frow2">
       <div class="field"><span class="fl">Type de reunion</span>
         <select class="fi" id="cr-type">
+          <option>Reunion libre</option>
           <option>Reunion de suivi</option><option>Lancement projet</option>
           <option>Point etape</option><option>Reunion client</option>
           <option>Revue de sprint</option><option>Comite de direction</option>
@@ -473,6 +474,7 @@ input[type=number]{-moz-appearance:textfield;}
     </div>
     <div class="field"><span class="fl">Type de reunion</span>
       <select class="fi" id="cr-type-t" onchange="updateFormatPreview()">
+        <option value="libre">Reunion libre (sans theme)</option>
         <option value="suivi">Reunion de suivi</option>
         <option value="lancement">Lancement de projet</option>
         <option value="client">Reunion client</option>
@@ -1383,6 +1385,12 @@ var CR_FORMATS = {
     freq: 'Quotidienne - 10 a 15 min max',
     sections: ['Hier : ce que chaque membre a termine (1-2 lignes par personne)','Aujourd hui : taches prevues dans la journee (1-2 lignes par personne)','Blocages : impediments a resoudre en dehors du standup'],
     style: 'Ultra-court. Format tableau par personne. Maximum 1 page. Aller droit au but'
+  },
+  libre: {
+    label: 'Reunion libre',
+    freq: 'Ponctuelle - duree variable',
+    sections: ['Contexte et objet de la reunion (deduit de la transcription)','Participants et roles','Points abordes (structure automatiquement par themes)','Decisions prises','Actions a suivre : tableau Qui / Quoi / Quand','Prochaines etapes si mentionnees'],
+    style: 'Adapte automatiquement le ton et le format au contenu de la transcription. Identifie les themes, structure librement, reste professionnel. Si aucune decision claire : indique "A confirmer"'
   }
 };
 
